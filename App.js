@@ -9,15 +9,12 @@ import {
   Alert,
 } from "react-native";
 import Fontisto from "@expo/vector-icons/Fontisto";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { theme } from "./color";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import axios from "axios";
 
 const STORAGE_KEY = "@toDos";
 const TNW_KEY = "TNW";
-const API_URL = "http://192.168.0.5:3000";
 
 export default function App() {
   const [working, setWorking] = useState(true);
@@ -44,16 +41,8 @@ export default function App() {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   };
   const loadToDos = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/todos`);
-      const loadedToDos = response.data.reduce((acc, toDo) => {
-        acc[toDo.id] = toDo;
-        return acc;
-      }, {});
-      setToDos(loadedToDos);
-    } catch (error) {
-      console.error("Failed to load to-dos:", error);
-    }
+    const s = await AsyncStorage.getItem(STORAGE_KEY);
+    if (s) setToDos(JSON.parse(s));
   };
 
   const loadTnW = async () => {
@@ -62,15 +51,13 @@ export default function App() {
   };
   const addToDo = async () => {
     if (text === "") return;
-    const newToDo = { text, working, completed };
-    try {
-      const response = await axios.post(`${API_URL}/todos`, newToDo);
-      const savedToDo = response.data;
-      setToDos((prevToDos) => ({ ...prevToDos, [savedToDo.id]: savedToDo }));
-      setText("");
-    } catch (error) {
-      console.error("Failed to add to-do:", error);
-    }
+    const newToDos = {
+      ...toDos,
+      [Date.now()]: { text, working, completed },
+    };
+    setToDos(newToDos);
+    await saveToDos(newToDos);
+    setText("");
   };
   const editTextTrue = (key) => {
     setEdit((prev) => ({ ...prev, [key]: true }));
@@ -81,49 +68,32 @@ export default function App() {
   const editTextToDo = async (key) => {
     if (editText === "") return;
     const editedToDo = { ...toDos[key], text: editText };
-    try {
-      await axios.put(`${API_URL}/todos/${key}`, editedToDo);
-      setToDos((prevToDos) => ({
-        ...prevToDos,
-        [key]: editedToDo,
-      }));
-      setEditText("");
-      editTextFalse(key);
-    } catch (error) {
-      console.error("Failed to edit to-do:", error);
-    }
+    const newToDos = { ...toDos, [key]: editedToDo };
+    setToDos(newToDos);
+    await saveToDos(newToDos);
+    setEditText("");
+    editTextFalse(key);
   };
   const completedToDo = async (key) => {
-    const updatedToDo = { ...toDos[key], completed: !toDos[key].completed };
-    try {
-      await axios.put(`${API_URL}/todos/${key}`, updatedToDo);
-      setToDos((prevToDos) => ({
-        ...prevToDos,
-        [key]: updatedToDo,
-      }));
-    } catch (error) {
-      console.error("Failed to update to-do:", error);
-    }
+    const newToDos = { ...toDos };
+    newToDos[key].completed = newToDos[key].completed === true ? false : true;
+    setToDos(newToDos);
+    await saveToDos(newToDos);
   };
   const deleteToDo = (key) => {
     Alert.alert("Delete To Do?", "Are you sure?", [
       { text: "Cancel" },
       {
-        text: "Sure",
+        text: "sure",
         onPress: async () => {
-          try {
-            await axios.delete(`${API_URL}/todos/${key}`);
-            setToDos((prevToDos) => {
-              const newToDos = { ...prevToDos };
-              delete newToDos[key];
-              return newToDos;
-            });
-          } catch (error) {
-            console.error("Failed to delete to-do:", error);
-          }
+          const newToDos = { ...toDos };
+          delete newToDos[key];
+          setToDos(newToDos);
+          await saveToDos(newToDos);
         },
       },
     ]);
+    return;
   };
 
   return (
@@ -144,7 +114,7 @@ export default function App() {
               color: !working ? "white" : theme.grey,
             }}
           >
-            Travel
+            Enjoy
           </Text>
         </TouchableOpacity>
       </View>

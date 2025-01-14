@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "WorkHardTravelHardApp",
-    "slug": "WorkHardTravelHardApp",
+    "name": "WorkEnjoyApp",
+    "slug": "WorkEnjoyApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -20,14 +20,14 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.cjfwls2639.WorkHardTravelHardApp"
+      "package": "com.cjfwls2639.WorkEnjoyApp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "7d4f732f-def5-403a-a2d1-8c1b7d29cf41"
+        "projectId": "0041b7db-dca8-4bf4-af18-b823283a7b81"
       }
     },
     "runtimeVersion": {
@@ -35,6 +35,7 @@
     },
     "updates": {
       "url": "https://u.expo.dev/7d4f732f-def5-403a-a2d1-8c1b7d29cf41"
-    }
+    },
+    "owner": "cjfwls2639"
   }
 }
