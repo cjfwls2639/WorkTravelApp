@@ -9,17 +9,22 @@ import {
   Alert,
 } from "react-native";
 import Fontisto from "@expo/vector-icons/Fontisto";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { theme } from "./color";
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import axios from "axios";
 
 const STORAGE_KEY = "@toDos";
 const TNW_KEY = "TNW";
+const API_URL = "192.168.0.5:3000";
 
 export default function App() {
   const [working, setWorking] = useState(true);
   const [text, setText] = useState("");
+  const [editText, setEditText] = useState("");
   const [toDos, setToDos] = useState({});
+  const [edit, setEdit] = useState({});
   const completed = false;
   useEffect(() => {
     loadToDos();
@@ -33,48 +38,92 @@ export default function App() {
     setWorking(true);
     await AsyncStorage.setItem(TNW_KEY, "true");
   };
-  const onChangeTexg = (payload) => setText(payload);
+  const onChangeText = (payload) => setText(payload);
+  const onChangeEditText = (payload) => setEditText(payload);
   const saveToDos = async (toSave) => {
     await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
   };
   const loadToDos = async () => {
-    const s = await AsyncStorage.getItem(STORAGE_KEY);
-    if (s) setToDos(JSON.parse(s));
+    try {
+      const response = await axios.get(`${API_URL}/todos`);
+      const loadedToDos = response.data.reduce((acc, toDo) => {
+        acc[toDo.id] = toDo;
+        return acc;
+      }, {});
+      setToDos(loadedToDos);
+    } catch (error) {
+      console.error("Failed to load to-dos:", error);
+    }
   };
+
   const loadTnW = async () => {
     const tnw = await AsyncStorage.getItem(TNW_KEY);
     tnw === "true" ? setWorking(true) : setWorking(false);
   };
   const addToDo = async () => {
     if (text === "") return;
-    const newToDos = {
-      ...toDos,
-      [Date.now()]: { text, working, completed },
-    };
-    setToDos(newToDos);
-    await saveToDos(newToDos);
-    setText("");
+    const newToDo = { text, working, completed };
+    try {
+      const response = await axios.post(`${API_URL}/todos`, newToDo);
+      const savedToDo = response.data;
+      setToDos((prevToDos) => ({ ...prevToDos, [savedToDo.id]: savedToDo }));
+      setText("");
+    } catch (error) {
+      console.error("Failed to add to-do:", error);
+    }
+  };
+  const editTextTrue = (key) => {
+    setEdit((prev) => ({ ...prev, [key]: true }));
+  };
+  const editTextFalse = (key) => {
+    setEdit((prev) => ({ ...prev, [key]: false }));
+  };
+  const editTextToDo = async (key) => {
+    if (editText === "") return;
+    const editedToDo = { ...toDos[key], text: editText };
+    try {
+      await axios.put(`${API_URL}/todos/${key}`, editedToDo);
+      setToDos((prevToDos) => ({
+        ...prevToDos,
+        [key]: editedToDo,
+      }));
+      setEditText("");
+      editTextFalse(key);
+    } catch (error) {
+      console.error("Failed to edit to-do:", error);
+    }
   };
   const completedToDo = async (key) => {
-    const newToDos = { ...toDos };
-    newToDos[key].completed = newToDos[key].completed === true ? false : true;
-    setToDos(newToDos);
-    await saveToDos(newToDos);
+    const updatedToDo = { ...toDos[key], completed: !toDos[key].completed };
+    try {
+      await axios.put(`${API_URL}/todos/${key}`, updatedToDo);
+      setToDos((prevToDos) => ({
+        ...prevToDos,
+        [key]: updatedToDo,
+      }));
+    } catch (error) {
+      console.error("Failed to update to-do:", error);
+    }
   };
   const deleteToDo = (key) => {
     Alert.alert("Delete To Do?", "Are you sure?", [
       { text: "Cancel" },
       {
-        text: "sure",
+        text: "Sure",
         onPress: async () => {
-          const newToDos = { ...toDos };
-          delete newToDos[key];
-          setToDos(newToDos);
-          await saveToDos(newToDos);
+          try {
+            await axios.delete(`${API_URL}/todos/${key}`);
+            setToDos((prevToDos) => {
+              const newToDos = { ...prevToDos };
+              delete newToDos[key];
+              return newToDos;
+            });
+          } catch (error) {
+            console.error("Failed to delete to-do:", error);
+          }
         },
       },
     ]);
-    return;
   };
 
   return (
@@ -101,11 +150,11 @@ export default function App() {
       </View>
       <TextInput
         onSubmitEditing={addToDo}
-        onChangeText={onChangeTexg}
+        onChangeText={onChangeText}
         returnKeyType="done"
         value={text}
         placeholder={
-          working ? "What do you have to do?" : "Where do you wnat to go?"
+          working ? "What do you edit to do?" : "Where do you edit to go?"
         }
         style={styles.input}
         hidden
@@ -114,15 +163,32 @@ export default function App() {
         {Object.keys(toDos).map((key) =>
           toDos[key].working === working ? (
             <View style={styles.toDo} key={key}>
-              <Text
-                style={
-                  toDos[key].completed === true
-                    ? styles.toCompletedText
-                    : styles.toDoText
-                }
-              >
-                {toDos[key].text}
-              </Text>
+              {edit[key] === true ? (
+                <TextInput
+                  onSubmitEditing={() => editTextToDo(key)}
+                  onChangeText={onChangeEditText}
+                  returnKeyType="done"
+                  value={editText}
+                  placeholder={
+                    working
+                      ? "What do you have to do?"
+                      : "Where do you wnat to go?"
+                  }
+                  style={styles.input}
+                  hidden
+                />
+              ) : (
+                <Text
+                  style={
+                    toDos[key].completed === true
+                      ? styles.toCompletedText
+                      : styles.toDoText
+                  }
+                >
+                  {toDos[key].text}
+                </Text>
+              )}
+
               <View style={styles.btnPos}>
                 <TouchableOpacity
                   onPress={() => completedToDo(key)}
@@ -137,6 +203,12 @@ export default function App() {
                       color={theme.grey}
                     />
                   )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => editTextTrue(key)}
+                  style={styles.eachBtn}
+                >
+                  <MaterialIcons name="edit" size={24} color={theme.grey} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => deleteToDo(key)}>
                   <Fontisto name="trash" size={24} color={theme.grey} />

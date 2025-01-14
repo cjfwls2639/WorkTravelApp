@@ -9,12 +9,17 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "1.23.1",
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
     "expo": "~52.0.24",
     "expo-status-bar": "~2.0.0",
+    "expo-updates": "~0.26.12",
+    "express": "^4.21.2",
+    "mysql": "^2.18.1",
+    "mysql2": "^3.12.0",
     "react": "18.3.1",
-    "react-native": "0.76.5",
-    "@react-native-async-storage/async-storage": "1.23.1",
-    "expo-updates": "~0.26.12"
+    "react-native": "0.76.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
