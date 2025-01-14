@@ -17,7 +17,7 @@ import axios from "axios";
 
 const STORAGE_KEY = "@toDos";
 const TNW_KEY = "TNW";
-const API_URL = "192.168.0.5:3000";
+const API_URL = "http://192.168.0.5:3000";
 
 export default function App() {
   const [working, setWorking] = useState(true);

@@ -1,12 +1,12 @@
 const express = require("express");
 const mysql = require("mysql2");
 const bodyParser = require("body-parser");
+const cors = require("cors");
 
 const app = express();
-const port = 3000;
-const cors = require("cors");
-app.use(cors());
+const port = process.env.PORT || 3000;
 
+app.use(cors());
 app.use(bodyParser.json());
 
 const db = mysql.createConnection({
@@ -23,10 +23,27 @@ db.connect((err) => {
     return;
   }
   console.log("Connected to MySQL");
+
+  const createTableQuery = `
+    CREATE TABLE IF NOT EXISTS todos (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      text VARCHAR(255) NOT NULL,
+      working BOOLEAN NOT NULL,
+      completed BOOLEAN NOT NULL
+    );
+  `;
+  db.query(createTableQuery, (err, result) => {
+    if (err) {
+      console.error("Error creating table:", err);
+      return;
+    }
+    console.log("Table 'todos' is ready");
+  });
 });
 
 // Create (C)
 app.post("/todos", (req, res) => {
+  console.log("Received POST request for /todos", req.body);
   const { text, working, completed } = req.body;
   const query = "INSERT INTO todos (text, working, completed) VALUES (?, ?, ?)";
   db.query(query, [text, working, completed], (err, result) => {
@@ -40,6 +57,7 @@ app.post("/todos", (req, res) => {
 
 // Read (R)
 app.get("/todos", (req, res) => {
+  console.log("Received GET request for /todos");
   db.query("SELECT * FROM todos", (err, results) => {
     if (err) {
       res.status(500).send(err);
